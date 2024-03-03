@@ -8,6 +8,7 @@ import ImageModal from './components/ImageModal/ImageModal';
 import LoadMoreBtn from './components/LoadMoreButton/LoadMoreButtom';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 
 
@@ -44,7 +45,7 @@ export default function App() {
       setImages(prevImages => [...prevImages, ...response.data.results]);
       setCurrentPage(nextPage);
     } catch (error) {
-      console.error('Error fetching more images:', error);
+      toast.error('Failed to fetch images. Please try again later.');
     } finally {
       setLoading(false);
     }
