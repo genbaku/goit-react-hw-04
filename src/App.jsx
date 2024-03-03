@@ -1,25 +1,92 @@
+import { useState } from 'react';
+import SearchBar from './components/SearchBar/Searchbar';
+import ImageGallery from './components/ImageGallery/ImageGallery';
+import ImageCard from './components/ImageCard/ImageCard';
+import CustomLoader from './components/Loader/Loader';
+import ErrorMessage from './components/ErrorMessage/ErrorMessage';
+import ImageModal from './components/ImageModal/ImageModal';
+import LoadMoreBtn from './components/LoadMoreButton/LoadMoreButtom';
+import axios from 'axios';
+import { Toaster } from 'react-hot-toast';
 
-import { Profile } from "./components/Profile/Profile"
-import { FriendList } from "./components/FriendList/FriendList"
-import { TransactionHistory } from "./components/TransactionHistory/TransactionHistory"
-import userData from "./data/userData.json"
-import friends from "./data/friends.json"
-import transactions from "./data/transactions.json"
 
-export const App = () => {
+
+export default function App() {
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState({});
+  const [currentSearch, setCurrentSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const handleSearch = async (results, query) => {
+    try {
+      setLoading(true);
+      setImages(results);
+      setCurrentSearch(query);
+      setCurrentPage(1);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    try {
+      setLoading(true);
+      const nextPage = currentPage + 1;
+      const response = await axios.get(`https://api.unsplash.com/search/photos`, {
+        params: {
+          query: currentSearch,
+          client_id: '1D37ZDRQZeZP3C2WPuc407dk3IPd5_MACV_uW0xCiKE',
+          page: nextPage,
+        },
+      });
+      setImages(prevImages => [...prevImages, ...response.data.results]);
+      setCurrentPage(nextPage);
+    } catch (error) {
+      console.error('Error fetching more images:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenModal = (imageUrl, alt) => {
+    setSelectedImage({ imageUrl, alt });
+    setModalIsOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalIsOpen(false);
+  };
+
   return (
-    <>
-      <Profile
-        name={userData.username}
-        tag={userData.tag}
-        location={userData.location}
-        image={userData.avatar}
-        stats={userData.stats}
+    <div>
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
       />
-      <hr />
-      <FriendList friends={friends} />
-      <hr />
-      <TransactionHistory items={transactions} />
-    </>
-  )
+      <SearchBar onSubmit={handleSearch} />
+      {loading ? <CustomLoader /> : null}
+      {images.length > 0 && (
+        <ImageGallery>
+          {images.map((image) => (
+            <ImageCard
+              key={image.id}
+              imageUrl={image.urls.small}
+              alt={image.alt_description}
+              onImageClick={() => handleOpenModal(image.urls.regular, image.alt_description)}
+            />
+          ))}
+        </ImageGallery>
+      )}
+      {images.length === 0 && !loading && <ErrorMessage />}
+      <LoadMoreBtn onLoadMore={handleLoadMore} hasMoreImages={images.length > 0} />
+      <ImageModal
+        isOpen={modalIsOpen}
+        onRequestClose={handleCloseModal}
+        imageUrl={selectedImage.imageUrl}
+        alt={selectedImage.alt}
+      />
+    </div>
+  );
 }
